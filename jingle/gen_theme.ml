@@ -91,7 +91,7 @@ let parsed_call = match call with
       exit 1
 
 
-let filter_func f func_env = List.filter (fun (x, _, _) -> Misc.string_eq x f) func_env
+let filter_func f func_env = List.filter (fun (x, _) -> Misc.string_eq x f) func_env
 
 let filter_map e map_env = List.filter (fun (x, _) -> Misc.string_eq x e) map_env
 
@@ -99,19 +99,23 @@ let filter_unmap e map_env = List.filter (fun (x, _) -> not (Misc.string_eq x e)
 
 let rec apply f e map_env func_env = match filter_func f func_env with
 | [] -> raise(Error ("no func for " ^ f ^ "."))
-| (_, d, c) :: tl -> match map_env with
+| (_, ParseMap.Appliable(d, c)) :: tl -> (match map_env with
                | [] -> raise(Error ("no left rule for " ^ e ^ "."))
                | (_, mr) :: _ ->
                     let re = Str.regexp d in
                     try let _ = Str.search_forward re mr 0 in
                         Str.replace_first (Str.regexp d) c mr
-                    with Not_found -> apply f e map_env tl
+                    with Not_found -> apply f e map_env tl)
+| (_, ParseMap.Sequence(fs)) :: tl -> 
+                (try List.fold_left (fun g a -> apply g a map_env func_env) e fs
+                with Error _ -> apply f e map_env tl)
+       
 
 let rec expand call_list map_env func_env times =
         let callable = List.filter (fun (_, _, e) -> List.mem_assoc e map_env) call_list in
         let uncallable = List.filter (fun (_, _, e) -> not (List.mem_assoc e map_env)) call_list in
         let try_expand (l, f, a) = 
-                let r = apply f a (filter_map a map_env) (filter_func f func_env)
+                let r = apply f a (filter_map a map_env) func_env
                 in (l, r)
         in
         let res = List.map try_expand callable in
@@ -126,8 +130,9 @@ let () =
     List.iter (fun (s,t) ->
       eprintf "\"%s\" -> \"%s\"\n" s t)
       parsed.ParseMap.conversions;
-    List.iter (fun (n, f, a) ->
-      eprintf "\"%s\" -> \"@%s %s\"\n" n f a)
+    List.iter (fun (n, func) -> match func with
+      | ParseMap.Appliable(f, a) -> eprintf "\"%s\" : \"@%s %s\"\n" n f a
+      | ParseMap.Sequence(fs) -> eprintf "\"%s\" : %s\n" n (String.concat " | " fs))
       parsed.ParseMap.funcs;
    eprintf "Reading call file :\n";
     List.iter (fun (n, l, r) ->

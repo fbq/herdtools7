@@ -14,7 +14,7 @@ C
 
 "%r = xchg_acq_rel(%x, %y);" -> "@release %r = xchg_acquire(%x, %y);"
 
-"%r = xchg(%x, %y);" -> "@full_on_acq_rel %r = xchg_acq_rel(%x, %y);"
+"%r = xchg(%x, %y);" -> "@full %r = xchg_relaxed(%x, %y);"
 
 "%r = xchg_acquire(%x, constvar:c);" -> "@acquire %r = xchg_relaxed(%x, constvar:c);"
 

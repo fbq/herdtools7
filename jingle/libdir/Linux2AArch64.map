@@ -114,6 +114,7 @@ store: STLR %t2,[%t1]"
 
 "full_on_acq_rel" : "\([^;]$\)" -> "\1;
 				   DMB ISH"
+"full" : "acquire | release | full_on_acq_rel"
 
 "id" : "" -> ""
 "const_to_1" : "&c" -> "#1"
