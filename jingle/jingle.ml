@@ -17,7 +17,7 @@ open Printf
 
 let verbose = ref 0
 let includes = ref []
-let map = ref None
+let map = ref []
 let outdir = ref None
 let args = ref []
 let prog =
@@ -142,8 +142,8 @@ let () =
      " be verbose, repeat to increase verbosity";
      "-I", Arg.String (fun s -> includes := !includes @ [s]),
      "<dir> add <dir> to search path";
-     "-theme",Arg.String (fun s -> map := Some s),
-     "<name>  give the theme file <name>";
+     "-theme",Arg.String (fun s -> map := Misc.split_on_char ',' s),
+     "<name>[,<name>]* give the theme files <name>[,<name>...,<name>]";
      "-o",Arg.String (fun s -> outdir := Some s),
      "<name>  directory for output files"]
     (fun s -> args := s :: !args)
@@ -167,8 +167,8 @@ let libfind =
   ML.find
 
 let parsed = match map with
-| None -> raise (Error "No map file provided.")
-| Some s ->
+| [] -> raise (Error "No map file provided.")
+| s::_ ->
     let s = libfind s in
     try Misc.input_protect ParseMap.parse s
     with ParseMap.Error msg ->
