@@ -88,6 +88,12 @@ let contract st = match st with
     Children ("",ts)
 | Children (sc,ts) -> do_children sc "" ts
 
+let get_scopes i st =
+  let rec get_scopes_an i st = match st with
+    | Leaf (s, l) -> if List.mem i l then [s] else []
+    | Children (s, ts) -> s :: (ts |> List.map (get_scopes_an i) |> List.concat)
+  in get_scopes_an i st |> List.filter (fun s -> String.length s != 0)
+
 type test = {
   regions : mem_space_map option;
   scopes : scopes option;
