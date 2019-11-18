@@ -166,21 +166,28 @@ let libfind =
       end) in
   ML.find
 
-let parsed = match map with
-| [] -> raise (Error "No map file provided.")
-| s::_ ->
-    let s = libfind s in
-    try Misc.input_protect ParseMap.parse s
+let themes = map |> List.map (fun theme ->
+    let s = libfind theme in
+    let name = (theme |> Filename.basename |> Filename.remove_extension) in
+    try name, Misc.input_protect ParseMap.parse theme
     with ParseMap.Error msg ->
       eprintf "File \"%s\": %s\n" s msg ;
-      exit 1
+      exit 1)
+
+let theme_by_scope name = themes |> List.assoc name
+
+let parsed = themes |> List.hd |> snd
+
+let conversions_list = themes |> List.map (fun (n, p) -> n, p.ParseMap.conversions)
 
 let () =
   if verbose > 1 then begin
-   eprintf "Reading theme file :\n";
-    List.iter (fun (s,t) ->
-      eprintf "\"%s\" -> \"%s\"\n" s t)
-      parsed.ParseMap.conversions
+   themes |> List.iter (fun (n, p) ->
+               eprintf "Reading theme file of scope %s:\n" n;
+               List.iter (fun (s,t) ->
+                 eprintf "\"%s\" -> \"%s\"\n" s t)
+                 p.ParseMap.conversions
+   )
   end
 
 module Source = (val get_arch parsed.ParseMap.source)
@@ -192,7 +199,7 @@ module Trad =
       let verbose = verbose > 0
       module Source = Source
       module Target = Target
-      let conversions = parsed.ParseMap.conversions
+      let conversions = conversions_list
     end)
 
 

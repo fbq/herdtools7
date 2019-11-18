@@ -21,7 +21,7 @@ module type Config = sig
   val verbose : bool
   module Source : Arch.S
   module Target : Arch.S
-  val conversions : (string * string) list
+  val conversions : (string * ((string * string) list)) list
 end
 
 module Make(C:Config) = struct
@@ -89,7 +89,12 @@ module Make(C:Config) = struct
 
   end
 
-  let conversions =
+  let conversions scope =
+    let map = (* find the conversion by scope name, otherwise use the first conversion *)
+      try (C.conversions |> List.assoc scope) with
+      | Not_found -> (snd (List.hd C.conversions))
+    in
+
     List.map
       (fun (s,t) ->
         let s =
@@ -102,7 +107,7 @@ module Make(C:Config) = struct
               raise e in
         (s,t)
       )
-      C.conversions
+      map
 
   let rec dig subs pat instr = match pat,instr with
   | [],_ -> Some (instr,[])
@@ -163,7 +168,7 @@ module Make(C:Config) = struct
 
     | _,_ -> None
 
-  let get_pattern_seq instrs =
+  let get_pattern_seq scopes instrs =
     let rec aux instrs =
       pp_lab "AUX" instrs ;
       let rec find = function
@@ -188,13 +193,19 @@ module Make(C:Config) = struct
                   -> Some((is,Target.Label(l,c)::cs,subs),rs)
                 | _,_ -> Some((is,conv,subs),rs)
       in
-      match find conversions with
+      let r = List.fold_left
+        (fun result scope -> match result with
+                                | None -> find (conversions scope)
+                                | _ -> result
+        ) None scopes
+      in
+      match r with
       | None -> raise (Error "Cannot find conversion rule.")
       | Some(ins,[]) -> [ins]
       | Some(ins,rs) -> ins::(aux rs)
     in aux instrs
 
-  let rec convert env instrs =
+  let rec convert env scopes instrs =
     let rec aux env l = match l with
     | [] -> [],env
     | (_src,tgt,subs)::ts ->
@@ -215,14 +226,14 @@ module Make(C:Config) = struct
                   let lbl,env = Env.get_label env l in
                   (Target.Lab(s,lbl)::cv,env)
               | Source.Code(s,c) ->
-                  let c,env = convert env c in
+                  let c,env = convert env scopes c in
                   (Target.Code(s,c)::cv,env)
             )
             ([],env) subs in
         let flw,env = aux env ts
         in (tgt,(Env.get_lab_convs env)@conv)::flw,env
     in
-    let chunks,env = aux env (get_pattern_seq instrs) in
+    let chunks,env = aux env (get_pattern_seq scopes instrs) in
     let chunks = List.map (fun (tgt,conv) ->
       Target.instanciate_with
         conv (Env.get_free_register env) tgt)
@@ -278,7 +289,7 @@ module Make(C:Config) = struct
     let src = Source.Parser.parse chin sres in
     let open MiscParser in
     let prog = List.map (fun (i,p) ->
-      let p,e = convert Env.init p in
+      let p,e = convert Env.init (BellInfo.get_scopes i (Misc.as_some src.scopes)) p in
       if debug > 1 then
         eprintf "Sub %s\n" (Env.pp_sub (fst e)) ;
       ((i,p),(i,e))) src.prog in
