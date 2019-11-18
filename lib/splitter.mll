@@ -141,6 +141,7 @@ and inside_prog  = parse
 | "cases" (* not sure if this line should still be here *)
 | "observed"|"Observed"
 | "locations"
+| "scopes"
 | "filter"
    { false,lexeme_start_p lexbuf }
  (* name is for longest match to avoid confusion, in case of eg. forallx *)

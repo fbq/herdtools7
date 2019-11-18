@@ -206,7 +206,7 @@ let get_locs c = ConstrGen.fold_constr get_locs_atom c MiscParser.LocSet.empty
       let prog = parsed_tr prog in
       let prog = transpose procs prog in
       let prog = expn_prog prog in
-      let (locs,filter,final,_quantifiers) =
+      let (scopes,locs,filter,final,_quantifiers) =
 	I.call_parser_loc "final"
 	  chan constr_loc SL.token StateParser.constraints in
       check_regs procs init locs final ;
@@ -217,6 +217,7 @@ let get_locs c = ConstrGen.fold_constr get_locs_atom c MiscParser.LocSet.empty
       let parsed =
         {
          MiscParser.info; init; prog = prog;
+         scopes = scopes;
          filter = filter;
          condition = final; 
          locations = locs;

@@ -18,6 +18,7 @@
 open Constant
 open MiscParser
 open ConstrGen
+open BellInfo
 let mk_sym_tag s t = Symbolic ((s,Some t),0)
 let mk_lab p s = Label (p,s)
 %}
@@ -31,7 +32,7 @@ let mk_lab p s = Label (p,s)
 
 %token TRUE FALSE
 %token EQUAL NOTEQUAL EQUALEQUAL PLUS_DISJ
-%token FINAL FORALL EXISTS OBSERVED TOKAND NOT AND OR IMPLIES CASES WITH FILTER
+%token FINAL FORALL EXISTS OBSERVED TOKAND NOT AND OR IMPLIES CASES WITH FILTER SCOPES
 %token LOCATIONS FAULT STAR
 %token LBRK RBRK LPAR RPAR SEMI COLON AMPER QUOTE COMMA
 %token ATOMIC
@@ -51,7 +52,7 @@ let mk_lab p s = Label (p,s)
 %start init
 %type <MiscParser.location> location
 %start location
-%type <(MiscParser.location * MiscParser.run_type) list * MiscParser.prop option * MiscParser.constr * (string * MiscParser.quantifier) list> constraints
+%type <BellInfo.scopes option * (MiscParser.location * MiscParser.run_type) list * MiscParser.prop option * MiscParser.constr * (string * MiscParser.quantifier) list> constraints
 %start constraints
 %type  <MiscParser.constr> constr
 %start constr
@@ -63,6 +64,8 @@ let mk_lab p s = Label (p,s)
 %start locs
 %type <MiscParser.prop option> filter
 %start filter
+%type <BellInfo.scopes option> scopes
+%start scopes
 %%
 
 /* For initial state */
@@ -173,11 +176,12 @@ filter:
 | FILTER prop { Some $2 }
 
 constraints:
-| locations filter old_constraints
-  { let x = $1 in
-    let f = $2 in
-    let y,z = $3 in
-    x,f,y,z }
+| scopes locations filter old_constraints
+  { let s = $1 in
+    let x = $2 in
+    let f = $3 in
+    let y,z = $4 in
+    s, x,f,y,z }
 
 old_constraints :
 | final EOF { $1,[] }
@@ -260,3 +264,33 @@ prop:
     { Implies ($1,$3) }
 | LPAR prop RPAR
     { $2 }
+
+proc_list_sc:
+| PROC proc_list_sc {$1::$2}
+| {[]}
+
+scope_tree_list:
+| scope_tree {[$1]}
+| scope_tree scope_tree_list {$1::$2}
+
+scope_tree:
+ | LPAR NAME scope_tree_list RPAR
+   {
+   BellInfo.Children($2,$3)
+   }
+ | LPAR NAME proc_list_sc RPAR
+   {
+   BellInfo.Leaf($2,$3)
+   }
+
+top_scope_tree:
+ | scope_tree_list
+    { let ts = $1 in
+      match ts with
+      | [t] -> t
+      | _ -> BellInfo.Children ("",ts) }
+
+scopes:
+ | { None }
+ | SCOPES COLON top_scope_tree { Some $3 }
+

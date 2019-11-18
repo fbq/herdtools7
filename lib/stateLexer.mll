@@ -67,6 +67,7 @@ rule token = parse
 | "final"    { FINAL }
 | "with"     { WITH }
 | "locations" { LOCATIONS }
+| "scopes" { SCOPES }
 | "filter" { FILTER }
 | "fault"|"Fault" { FAULT }
 (* Typing *)

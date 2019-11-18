@@ -308,6 +308,7 @@ module Make(C:Config) = struct
     { info = (OutMapping.key,dump_map map)::src.info;
       init = init;
       prog = prog;
+      scopes = src.scopes;
       filter = filter;
       condition = condition;
       locations = locations;

@@ -75,6 +75,7 @@ type ('i, 'p, 'prop, 'loc) result =
     { info : info ;
       init : 'i ;
       prog : 'p ;
+      scopes : BellInfo.scopes option;
       filter : 'prop option ;
       condition : 'prop ConstrGen.constr ;
       locations : ('loc * run_type) list ;

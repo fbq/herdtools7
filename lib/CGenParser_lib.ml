@@ -235,7 +235,7 @@ module Do
           code)
       prog ;
 *)
-    let (locs,filter,final,_quantifiers) =
+    let (scopes, locs,filter,final,_quantifiers) =
       I.call_parser_loc "final"
 		      chan constr_loc SL.token StateParser.constraints in
     check_regs procs init locs final ;
@@ -247,6 +247,7 @@ module Do
       {
         MiscParser.info; init=full_init; prog = prog;
         filter = filter;
+        scopes = scopes;
         condition = final; 
         locations = locs;
         extra_data = MiscParser.CExtra params;
